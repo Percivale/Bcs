@@ -1,0 +1,13 @@
+set (MAINHEAD
+    )
+
+set ( MAINSRC
+    main.cpp
+)
+SET( executable   NumX )
+add_executable(${executable} ${MAINSRC} ${MAINHEAD})
+INCLUDE_DIRECTORIES   ("${PROJECT_SOURCE_DIR}/solver")
+
+target_link_libraries(${executable} PUBLIC solver Eigen3::Eigen)
+
+

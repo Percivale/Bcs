@@ -1,3 +1,29 @@
+# Compilere fortran code
+Open a WSL (ubuntu) terminal window, move to the directory where your files are located. If you have the files at 'C:\Users\kajahh\git_repo' do
+```
+Terminal> cd /mnt/c/Users/kajahh/git_repo/Bcs/f_code
+Terminal> f77 gofr.f -o gofr
+Terminal> ./gofr
+```
+# C++ projects
+C++ projects are most convenient by the use of [Cmake](https://cmake.org/download/). Download and install latest version for Windows, and also for WSL/Ubuntu (don't use sudo apt-get, install from source)
+
+## Eigen
+Pull latest version of [Eigen](https://gitlab.com/libeigen/eigen). Read the [INSTALL](https://gitlab.com/libeigen/eigen/-/blob/master/INSTALL) instructions using Cmake.
+
+## run Cmake in this directory
+do
+
+```
+Terminal> mkdir build
+Terminal> cd build
+Terminal> cmake ..
+Terminal> make
+```
+The executable code is located in `bin/`
+
+
+
 # Bcs
 
 Fikk denne mailen av Jaakko, som forklarer hva jeg skal kode.  
