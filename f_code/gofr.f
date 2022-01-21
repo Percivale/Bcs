@@ -17,7 +17,7 @@
         integer nge,nte,nsb
         character*2 sp(nmax),co         
 
- 	open(10,file='TRAJEC.xyz')     ! INPUT
+ 	open(10,file='etrap_structures.tar')     ! INPUT
         open(11,file='gofr_0.01.hist') ! OUTPUT = partial distribution functions (PDFs)
 
         au=0.529177        ! Bohr radius
@@ -43,11 +43,14 @@
         adhocc=boxx*boxy*boxz/(nions*(nions-1))/bz
 
         do mm=1,niter         ! Frames
-!	
+!
 	read(10,*)nions
+      
 	read(10,*)co
+        print *, co  
 	do i=1,nions
 	read(10,*) sp(i),x(i),y(i),z(i)
+        print *, i+2, sp(i),x(i),y(i),z(i)
         x(i)=x(i)-boxx*nint(x(i)/boxx)
         y(i)=y(i)-boxy*nint(y(i)/boxy)
         z(i)=z(i)-boxz*nint(z(i)/boxz)
