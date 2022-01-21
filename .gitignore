@@ -69,6 +69,7 @@ build_win/
 build_win*/
 build_linux/
 
+out/
 .vs/
 InputFiles/
 

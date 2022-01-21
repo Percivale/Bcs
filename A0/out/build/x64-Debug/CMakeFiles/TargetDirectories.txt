@@ -1,8 +1,0 @@
-C:/Users/kajah/ntnu/NumFys/A0/out/build/x64-Debug/CMakeFiles/edit_cache.dir
-C:/Users/kajah/ntnu/NumFys/A0/out/build/x64-Debug/CMakeFiles/rebuild_cache.dir
-C:/Users/kajah/ntnu/NumFys/A0/out/build/x64-Debug/cpp_src/main/CMakeFiles/edit_cache.dir
-C:/Users/kajah/ntnu/NumFys/A0/out/build/x64-Debug/cpp_src/main/CMakeFiles/Assignment0X.dir
-C:/Users/kajah/ntnu/NumFys/A0/out/build/x64-Debug/cpp_src/main/CMakeFiles/rebuild_cache.dir
-C:/Users/kajah/ntnu/NumFys/A0/out/build/x64-Debug/cpp_src/solver/CMakeFiles/solver.dir
-C:/Users/kajah/ntnu/NumFys/A0/out/build/x64-Debug/cpp_src/solver/CMakeFiles/edit_cache.dir
-C:/Users/kajah/ntnu/NumFys/A0/out/build/x64-Debug/cpp_src/solver/CMakeFiles/rebuild_cache.dir

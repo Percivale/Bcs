@@ -66,7 +66,7 @@ void RandomWalk::walk(double range_from, double range_to) {
 	//std::cout << x.size() << std::endl;
 	x(0) = epsilon;
 	
-	for (int i = 1; i = n_; ++i) { // Something goes wrong in this loop. 
+	for (int i = 1; i <n_; ++i) { // Something goes wrong in this loop. 
 		epsilon = random(range_from, range_to);
 		if ( ((stop_criteria == "positive") && (x(i - 1) + epsilon >= 0)) 
 			|| ((stop_criteria == "negative") && (x(i - 1) + epsilon <= 0)) ) {
@@ -80,5 +80,5 @@ void RandomWalk::walk(double range_from, double range_to) {
 			x(i) = x(i - 1) + epsilon;
 		}
 	}
-	std::cout << "Here is the vector x: \n";
+	std::cout << "Here is the vector x: " << x << std::endl;;
 }
