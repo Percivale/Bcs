@@ -419,7 +419,7 @@ def make_2bond(i1, i2, i3):
 
     
 
-def get_2bond(bond1, bond2, new_bond_name, pdf_system, xyz_path):
+def get_2bond(bond1, bond2, new_bond_name, pdf_system, xyz_path, ring = False):
     """
     Takes in two dataframes. Checks if the index (i, j) overlap. If it does, the bonds appear in 
     the new dataframe.
@@ -512,6 +512,7 @@ def get_2bond(bond1, bond2, new_bond_name, pdf_system, xyz_path):
     
     df = pd.DataFrame(list(zip(bonds, bond_length1, bond_length2, length3, new_name)), columns = ["Index", "Bond length 1", "Bond length 2", "Length 3", "Bond name"])
     df = df.loc[(df["Length 3"] != 0)]
+    
     df = df.reset_index(drop=True)
     return df
 
@@ -737,7 +738,7 @@ def get_ML_data(xyz_path, csv_path):
     
     sio_bonds = df.loc[df["name"] == "Si O"]
     sio_bonds = sio_bonds.append(df.loc[df["name"] == "O Si"])
-    #sisi_bonds = df.loc[df["name"] == "Si Si"]
+    sisi_bonds = df.loc[df["name"] == "Si Si"]
     #oo_bonds = df.loc[df["name"] == "O O"]
     
     #print("Si-O bonds with cutoff 2.0: \n---------------------------------------\n")
@@ -753,10 +754,14 @@ def get_ML_data(xyz_path, csv_path):
     #sio_bonds has cutoff 2.0Å, so siosi will also have this cutoff distance. 
     siosi = get_2bond(sio_bonds, sio_bonds, "Si O Si", etrap, xyz_path)
     osio = get_2bond(sio_bonds, sio_bonds, "O Si O", etrap, xyz_path)
+    sisisi = get_2bond(sisi_bonds, sisi_bonds, "Si Si Si", etrap, xyz_path)
     #print("Si-O-Si bonds with cutoff 2.0Å: \n----------------------------------------------\n")
     #print(siosi)
     #print("O-Si-O bonds with cutoff 2.0Å: \n----------------------------------------------\n")
     #print(osio)
+    rings3 = sisisi.drop_duplicates(["Bond length 1", "Bond length 2", "Length 3"], ignore_index= True)
+    rings3 = remove_rev_dupes(rings3).reset_index(drop = True)
+    rings3.to_csv(csv_path + "rings3.csv")
     
     df_2 = pd.DataFrame().append([siosi, osio]).drop_duplicates(["Bond length 1", "Bond length 2", "Length 3"], ignore_index= True)
     df_2 = remove_rev_dupes(df_2)

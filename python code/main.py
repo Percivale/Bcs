@@ -9,42 +9,79 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import PDF as pdf
-
+import AmorphousOxide as ao
+import time
 
 xyz_path = "C:\\Users\\kajah\\ntnu\\bachelor_oppg\\xyz_files\\etrap_015.xyz"
+csv_path = "C:\\Users\\kajah\\git_repo\\Bcs\\python code\\data\\"
+
+etrap015 = ao.AmorphousOxide(216, 72, 144, [14.949, 14.949, 14.949], xyz_path)
+cutoffs = [3.5, 2.0, 3.0] #sisi, sio, oo
+
+#print(len(etrap015.nameArray))
+
+
+start = time.time()
+#df = etrap015.get_chain2(cutoffs)
+
+df = etrap015.get_dihedral_angles(cutoffs)
+df.to_csv(csv_path + "dihed_new.csv")
+#%%
+print(df)
+
+#%%
+
+#df2 = etrap015.get_chain3_2(df, df)
+end = time.time()
+print("Time passed: ", end - start)
+#print(df2)
+#df2.to_csv(csv_path + "angle_bonds.csv")
+
+#%%
+"""
+
 csv_path = "C:\\Users\\kajah\\git_repo\\Bcs\\python code\\data\\"
 
 df = pd.read_table(xyz_path, skiprows=2, delim_whitespace=True, nrows = 216, names=['atom', 'x', 'y', 'z'])
 #xyz_df = df[["x", "y", "z"]]
 #print(xyz_df.loc[0].values)
 
-bz = 0.008
-etrap = pdf.PDF(bz)
+#bz = 0.008
+#etrap = pdf.PDF(bz)
 
-angles = pd.read_csv(csv_path + "angles.csv")
+#angles = pd.read_csv(csv_path + "angles.csv")
 
-df = pd.read_csv(csv_path + "single_bonds.csv")
-sio_bonds = df.loc[df["name"] == "Si O"]
-sio_bonds = sio_bonds.append(df.loc[df["name"] == "O Si"])
-sio_bonds = sio_bonds[["dr", "index", "name"]]
+#df = pd.read_csv(csv_path + "single_bonds.csv")
+#sio_bonds = df.loc[df["name"] == "Si O"]
+#sio_bonds = sio_bonds.append(df.loc[df["name"] == "O Si"])
+#sio_bonds = sio_bonds[["dr", "index", "name"]]
 
 
-df_dihedral = pdf.get_dihedrals(sio_bonds, angles[["Index", "Bond length 1", "Bond length 2", "Length 3", "Bond name"]], xyz_path, etrap)
-df_dihedral = pdf.remove_rev_dupes(df_dihedral)
-df_dihedral.to_csv(csv_path + "dihedral_angles.csv")
+#df_dihedral = pdf.get_dihedrals(sio_bonds, angles[["Index", "Bond length 1", "Bond length 2", "Length 3", "Bond name"]], xyz_path, etrap)
+#df_dihedral = pdf.remove_rev_dupes(df_dihedral)
+#df_dihedral.to_csv(csv_path + "dihedral_angles.csv")
 
-#pdf.get_ML_data(xyz_path, csv_path)
+pdf.get_ML_data(xyz_path, csv_path)
 
 
 angles = pd.read_csv(csv_path + "angles.csv")
 dihedral = pd.read_csv(csv_path + "dihedral_angles.csv")
+
+"""
+"""
+RINGS:
+all bond lengths must be smaller than the cutoff 3.2/3.5
+All rings that contain all the same atoms as another ring must not be counted!
+
+"""
 #%%
+"""
 plt.figure()
 plt.title("Dihedral angles")
 plt.hist(dihedral["Dihedral angle"])
 plt.xlabel("Degrees")
 plt.show()
-
+"""
 #%%
 """
 
