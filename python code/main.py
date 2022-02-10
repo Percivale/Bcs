@@ -22,15 +22,17 @@ cutoffs = [3.5, 2.0, 3.0] #sisi, sio, oo
 
 
 start = time.time()
-#df = etrap015.get_chain2(cutoffs)
+df = etrap015.get_chain2(cutoffs)
 
-df = etrap015.get_dihedral_angles(cutoffs)
-df.to_csv(csv_path + "dihed_new.csv")
-#%%
+#f = etrap015.get_dihedral_angles(cutoffs)
+#df.to_csv(csv_path + "dihed_new.csv")
 print(df)
 
+sisi_idx = df["Index"].loc[df["Name"] == "Si Si"]
+print(sisi_idx)
+rings = ao.get_rings(sisi_idx.tolist(), 3)
 #%%
-
+print(rings)
 #df2 = etrap015.get_chain3_2(df, df)
 end = time.time()
 print("Time passed: ", end - start)

@@ -6,7 +6,6 @@ Created on Fri Feb  4 14:40:34 2022
 """
 import numpy as np
 import pandas as pd
-from numba import njit
 
 
 class AmorphousOxide:
@@ -79,6 +78,9 @@ class AmorphousOxide:
         df = df.drop_duplicates()
         #df = remove_rev_dupes(df)
         return df
+
+
+        
 def calc_angle(a, b, c):
     angle = np.rad2deg(np.arccos((a**2 + b**2 - c**2)/(2*a*b))) # Cosine law ##
     return angle    
@@ -92,7 +94,6 @@ def remove_rev_dupes(df):
                 df = df.drop(df.index[df["Index"] == j])
     return df
     
-#@njit
 def make_bonds(x_array, y_array, z_array, name_array, boxx, boxy, boxz, cutoffs):
     cut_sisi = cutoffs[0]
     cut_sio = cutoffs[1]
@@ -141,7 +142,7 @@ def make_bonds(x_array, y_array, z_array, name_array, boxx, boxy, boxz, cutoffs)
                     
     return index, names, bondlengths, x_12, y_12, z_12#, bond_vec
 
-#@njit
+
 def match_bonds(index1, names1, bondlengths1, dx1, dy1, dz1, index2, names2, bondlengths2, dx2, dy2, dz2):
     bl1 = []
     bl2 = []
@@ -194,7 +195,6 @@ def calc_dihedral(dr12, dr23, dr34):
     angle = np.arctan2(x, y)
     return -np.rad2deg(angle)
 
-#@njit
 def get_dihedrals(index1, names1, bondlengths1, bondlengths12, dx11, dy11, dz11, dx12, dy12, dz12, index2, names2, bondlengths2, dx2, dy2, dz2):
     index = []
     bl1 = []
@@ -203,7 +203,6 @@ def get_dihedrals(index1, names1, bondlengths1, bondlengths12, dx11, dy11, dz11,
     
     angle = []
     name = []
-
 
     for i in range(len(index1)):
         idx1, idx2, idx3 = index1[i].split(" ")
@@ -231,127 +230,31 @@ def get_dihedrals(index1, names1, bondlengths1, bondlengths12, dx11, dy11, dz11,
     
     return index, name, bl1, bl2, bl3, angle
 
-"""
-#This one does not work. Too general
-@njit    
-def make_chain(n, x_array, y_array, z_array, name_array, boxx, boxy, boxz, cutoffs, ring = False, last_dist = False):
-    cut_sisi = cutoffs[0]
-    cut_sio = cutoffs[1]
-    cut_oo = cutoffs[2]
-    
-    #Initialize lists to contain chains:
-    index = []
-    names = []
-    bond_lengths = [] #This will have one row for each chain. Each column will be bondlengths between two atoms
-
-        
-    if ring:
-        n+=1 #so we can check if the last atom is the first in the chain -> ring
-        
-    #Iterate through every atom in array:
-    for atom1 in range(len(name_array)): #atom1 is the index of the atom
-        #Information about atom1:
-        x1 = x_array[atom1]
-        y1 = y_array[atom1]
-        z1 = z_array[atom1]
-        name1 = name_array[atom1]
-        #print(atom1)
-        
-        
-        #Temporary place to store data of the chain:
-        chain_name = [""]*n #containes name of atoms in chain
-        chain_idx = [""]*n #contains index of atoms in chain
-        chain_bondlengths = [0.0]*n #contains bond lengths between atoms in chain. 
-                                        #The last element is the distance between first and last atom
-        #chain_bondlengths = []
-        chain_x = [0.0]*n
-        chain_y = [0.0]*n
-        chain_z = [0.0]*n
-        
-        #Insert atom1 in chain arrays:
-        chain_name[0] = name1
-        chain_idx[0] = str(atom1)
-        chain_x[0] = x1
-        chain_y[0] = y1
-        chain_z[0] = z1
-        
-        for i in range(n-1): #Want to find n atoms that are connected, so must search n times. 
-            for atom2 in range(len(name_array)): #atom2 is the index of the atom
-                #Information about atom2:    
-                x2 = x_array[atom2]
-                y2 = y_array[atom2]
-                z2 = z_array[atom2]
-                name2 = name_array[atom2]
-                
-                #find distance between the atoms (with periodic boundary):
-                dx = chain_x[i] - x2 - boxx*np.rint((chain_x[i]-x2)/boxx)
-                dy = chain_y[i] - y2 - boxy*np.rint((chain_y[i]-y2)/boxy)
-                dz = chain_z[i] - z2 - boxz*np.rint((chain_z[i]-z2)/boxz)    
-                
-                dr = np.sqrt(dx**2 + dy**2 + dz**2)
-                #print(dr)
-
-                
-                if (((chain_name[i] == "Si" and name2 == "O") or (chain_name[i] == "O" or name2 == "Si")) and dr <= cut_sio) or (chain_name[i] == "Si" and name2 == "Si" and dr <= cut_sisi) or (chain_name[i] == "O" and name2 == "O" and dr <= cut_oo):
-                    #print(chain_idx[i], " ", atom2, " | ", chain_name[i], " ", name2, "| ", dr)
-
-                    if chain_idx[::-1] not in index: #If the chain has not been found earlier:
-                        if ring and chain_idx[0] == atom2 and i == n-1: #If chain and, it is closed like a ring, and it is long enough
-                            
-                            #Not interested in bond lengths for rings
-                            index.append(" ".join(chain_idx))
-                            names.append(" ".join(chain_name))
-                            break #Finished searching for ring. Look for new ring with same starting atom
-                        
-                        elif not ring and (atom2 in chain_idx or dr == 0.0):
-                            continue #Do not want rings if ring = false. So will skip to next atom2
-                            
-                        elif dr not in chain_bondlengths and dr != 0.0:  
-                            chain_idx[i+1] = str(atom2)
-                            chain_bondlengths[i] = dr
-                            chain_name[i+1] = name2
-                            chain_x[i+1] = x2
-                            chain_y[i+1] = y2
-                            chain_z[i+1] = z2
-                            
-                #print(chain_idx, " | ",chain_name," | ", chain_bondlengths)
-                #If all atoms in chain found, save it and continue looking for a new with same starting atom.        
-                if not ring and chain_idx[-1] != "" and " ".join(chain_idx) not in index:
-                    
-                    if last_dist:
-                        dx = chain_x[0] - chain_x[-1] - boxx*np.rint((chain_x[0]-chain_x[-1])/boxx)
-                        dy = chain_y[0] - chain_y[-1] - boxy*np.rint((chain_y[0]-chain_y[-1])/boxy)
-                        dz = chain_z[0]- chain_z[-1] - boxz*np.rint((chain_z[0]-chain_z[-1])/boxz)    
-                        
-                        chain_bondlengths[-1] = np.sqrt(dx**2 + dy**2 + dz**2) #add distance between first and last atom 
-                        bond_lengths.append(chain_bondlengths.copy())
-                        #print(chain_bondlengths)
-                        #print(bond_lengths[-1])
-                    else:
-                        bond_lengths.append(chain_bondlengths[:-1].copy())    
-                        
-                    names.append(" ".join(chain_name))
-                    index.append(" ".join(chain_idx))   
-                    #print(chain_idx)
-                    #print(chain_name)
-                    #print(chain_bondlengths)
-                    #print(bond_lengths)
-                    
-                    #Insert atom1 in chain arrays:
-                    #chain_name[0] = name1
-                    chain_name[1:] = [""]*(n-1)
-                    chain_bondlengths[1:] = [0.0]*(n-1)
-                    chain_idx[1:] = [""]*(n-1)
-                    chain_x[1:] = [0.0]*(n-1)
-                    chain_y[1:] = [0.0]*(n-1)
-                    chain_z[1:] = [0.0]*(n-1)
-                    #chain_idx[0] = str(atom1)
-                    #chain_x[0] = x1
-                    #chain_y[0] = y1
-                    #chain_z[0] = z1
-                    
-                    
-    #print(bond_lengths)
-    return index, names, bond_lengths
-"""
-        
+def get_rings(index, n):
+    rings = []
+    dupes = []
+    for i in range(len(index)):
+        idx1, idx2 = index[i].split(" ")
+        for k in range(len(index)):
+            idx4, idx3 = index[k].split(" ")
+            #print(idx1, idx2, idx3, idx4)
+            
+            if i == k:
+                continue
+            else:
+                pot_ring1 = idx1 + " " + idx2 + " " + idx4
+                pot_ring2 = idx2 + " " + idx4 + " " + idx1
+                pot_ring3 = idx4 + " " + idx1 + " " + idx2
+                if idx2 == idx3 and (idx1 + " " + idx4 in index): #and pot_ring1 not in rings: #and (pot_ring2 not in rings or pot_ring3 not in rings):
+                    #chain.append(idx3)
+                    rings.append(pot_ring1)
+                    dupes.append(pot_ring2)
+                    dupes.append(pot_ring3)
+                    #break #start again to look for next atom in chain
+    dupes = list(set(dupes))
+    print(dupes)
+    #for el in dupes:
+    #    try:
+    #        rings.remove(el)
+    #        pass
+    return rings

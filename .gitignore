@@ -1,6 +1,9 @@
 # Prerequisites
 *.d
 
+# csv files made to check code
+*.csv
+
 # Compiled Object files
 *.slo
 *.lo
