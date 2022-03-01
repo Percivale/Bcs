@@ -38,19 +38,9 @@ class AmorphousOxide:
         self.xArray = x - self.boxX*np.rint(x/self.boxX)
         self.yArray = y - self.boxY*np.rint(y/self.boxY)
         self.zArray = z - self.boxZ*np.rint(z/self.boxZ)
-        
-        
-    def calc_pdf(self, nhdim, bz, bond_type): #Remember framessss
-        """
-        if bond_type == "Si Si":
-            adhoc = self.boxX*self.boxY*self.boxZ/(self.nrSi*(self.nrSi-1))/bz            #Cofactors for each PDF
-        elif bond_type == "Si O" or bond_type == "O Si":
-            adhoc = self.boxX*self.boxY*self.boxZ/(self.nrSi*self.nrO - (self.nrSi + self.nrO))/bz
-        elif bond_type == "O O":
-            adhoc = self.boxX*self.boxY*self.boxZ/(self.nrO*(self.nrO-1))/bz
-        """  
-        
-        
+            
+    
+    def calc_pdf(self, nhdim, bz):
         adhoc = np.array([self.boxX*self.boxY*self.boxZ/(self.nrSi*(self.nrSi-1))/bz, self.boxX*self.boxY*self.boxZ/(self.nrSi*self.nrO - (self.nrSi + self.nrO))/bz,
                           self.boxX*self.boxY*self.boxZ/(self.nrO*(self.nrO-1))/bz])
         
@@ -58,7 +48,6 @@ class AmorphousOxide:
         dist = np.zeros((nhdim, 3))
         
         for i in range(len(self.xArray)):
-            #dx = xi - self.xArray[self.xArray != xi] - self.boxX*np.rint((xi - self.xArray[self.xArray != xi])/self.boxX)
             for j in range(len(self.xArray)):
                 dx = self.xArray[i] - self.xArray[j] - self.boxX*np.rint((self.xArray[i]-self.xArray[j])/self.boxX)
                 dy = self.yArray[i] - self.yArray[j] - self.boxY*np.rint((self.yArray[i]-self.yArray[j])/self.boxY)
@@ -69,71 +58,116 @@ class AmorphousOxide:
                 if dr <= self.boxX/2 and self.nameArray[i] + " " + self.nameArray[j] == "Si Si" and i != j:
                     ll = int(np.rint(dr/bz))
                     count[ll, 0] += 1
-                    dist[ll, 0] = dr
+                    dist[ll, 0] += dr
                 elif dr <= self.boxX/2 and self.nameArray[i] + " " + self.nameArray[j] == "Si O":
                     ll = int(np.rint(dr/bz))
                     count[ll, 1] += 1
-                    dist[ll, 1] = dr
+                    dist[ll, 1] += dr
                 elif dr <= self.boxX/2 and self.nameArray[i] + " " + self.nameArray[j] == "O O" and i != j:
                     ll = int(np.rint(dr/bz))
                     count[ll, 2] += 1
-                    dist[ll, 2] = dr
+                    dist[ll, 2] += dr
         #---------------------------------------------------------------------
-        rbz = np.zeros(len(count))
+        rbz = np.zeros((len(count), 3))
         i = np.arange(1, len(count)+1, 1)
         
-        rbz = bz*i
+        rbz[:,0] = bz*i
+        rbz[:,1] = bz*i
+        rbz[:,2] = bz*i
+        
         pdf = adhoc*count/(4*np.pi*rbz**2)
-        non_zero = (pdf != 0) 
+        #non_zero = (pdf != 0) 
+        #pdf = pdf[non_zero]
+        #print(pdf.shape)
+        #dist = dist[non_zero]/count[non_zero]
+        dist = dist/count
+        dist = np.nan_to_num(dist)
         
-        return pdf[non_zero], dist[non_zero]
-
+        sisi_pdf = pdf[:,0][dist[:,0] !=  0]
+        sio_pdf = pdf[:,1][dist[:,1] !=  0]
+        oo_pdf = pdf[:,2][dist[:,2] !=  0]
         
-    def get_chain2(self, cutoffs):
-        index, names, bond_lengths, dx, dy, dz = make_bonds(self.xArray, self.yArray, self.zArray, self.nameArray, 
-                                                self.boxX, self.boxY, self.boxZ, cutoffs)
-
-        df = pd.DataFrame(np.array([index, names, bond_lengths, dx, dy, dz]).T, columns = ["Index", "Name", "Bond length", "dx", "dy", "dz"])
-        return df
+        sisi_dist = dist[:,0][dist[:,0] !=  0]
+        sio_dist = dist[:,1][dist[:,1] !=  0]
+        oo_dist = dist[:,2][dist[:,2] !=  0]
+        
+        return sisi_pdf, sio_pdf, oo_pdf, sisi_dist, sio_dist, oo_dist
     
-    def get_dihedral_angles(self, cutoffs):
-        index2, names2, bond_lengths2, dx2, dy2, dz2 = make_bonds(self.xArray, self.yArray, self.zArray, self.nameArray, 
-                                                self.boxX, self.boxY, self.boxZ, cutoffs)
-
-        index1, names1, bl1, bl2, bl3, dx1, dy1, dz1, dx12, dy12, dz12 = match_bonds(index2, names2, bond_lengths2, dx2, dy2, dz2, index2, names2, bond_lengths2, dx2, dy2, dz2)
-        
-        index, names, bl1, bl2, bl3, angles = get_dihedrals(index1, names1, bl1, bl2, dx1, dy1, dz1, dx12, dy12, dz12, index2, names2, bond_lengths2, dx2, dy2, dz2)
-        print(len(angles))
-        df = pd.DataFrame(np.array([index, names, bl1, bl2, bl3, angles]).T, columns = ["Index", "Name", "Bond length 1", "Bond length 2", "Bond length 3", "Dihedral Angles"])
-        return df
     
-    def get_chain3_2(self, df1, df2):
-        index1 = df1["Index"].to_numpy(dtype = str)
-        names1 = df1["Name"].to_numpy(dtype = str)
-        bondlengths1 = df1["Bond length"].to_numpy(dtype = float)
-        dx1 = df1["dx"].to_numpy(dtype = float)
-        dy1 = df1["dy"].to_numpy(dtype = float)
-        dz1 = df1["dz"].to_numpy(dtype = float)
-
+    def calc_pdf_angle(self, nhdim, bz):
+        adhoc = np.array([self.boxX*self.boxY*self.boxZ/(self.nrSi**3 - (self.nrSi*3))/bz, self.boxX*self.boxY*self.boxZ/(self.nrSi**2*self.nrO - (self.nrSi*2 + self.nrO))/bz,
+                          self.boxX*self.boxY*self.boxZ/(self.nrSi*self.nrO**2 - (self.nrSi + self.nrO*2))/bz, self.boxX*self.boxY*self.boxZ/(self.nrO**3 -(self.nrO*3))/bz])
         
-
-        index2 =  df2["Index"].to_numpy(dtype = str)
-        names2 = df2["Name"].to_numpy(dtype = str)
-        bondlengths2 = df2["Bond length"].to_numpy(dtype = float)
-        dx2 = df2["dx"].to_numpy(dtype = float)
-        dy2 = df2["dy"].to_numpy(dtype = float)
-        dz2 = df2["dz"].to_numpy(dtype = float)
-
+        count = np.zeros((nhdim, 4))
+        angles = np.zeros((nhdim, 4))
         
-        index, names, bl1, bl2, bl3, dx1, dy1, dz1, dx2, dy2, dz2 = match_bonds(index1, names1, bondlengths1, dx1, dy1, dz1, index2, names2, bondlengths2, dx2, dy2, dz2)
+        for i in range(len(self.xArray)):
+            for j in range(len(self.xArray)):
+                dxij = self.xArray[i] - self.xArray[j] - self.boxX*np.rint((self.xArray[i]-self.xArray[j])/self.boxX)
+                dyij = self.yArray[i] - self.yArray[j] - self.boxY*np.rint((self.yArray[i]-self.yArray[j])/self.boxY)
+                dzij = self.zArray[i] - self.zArray[j] - self.boxZ*np.rint((self.zArray[i]-self.zArray[j])/self.boxZ) 
+                
+                drij = np.sqrt(dxij**2 + dyij**2 + dzij**2)
+                
+                for k in range(len(self.xArray)):
+                    dxik = self.xArray[i] - self.xArray[k] - self.boxX*np.rint((self.xArray[i]-self.xArray[k])/self.boxX)
+                    dyik = self.yArray[i] - self.yArray[k] - self.boxY*np.rint((self.yArray[i]-self.yArray[k])/self.boxY)
+                    dzik = self.zArray[i] - self.zArray[k] - self.boxZ*np.rint((self.zArray[i]-self.zArray[k])/self.boxZ) 
+                    
+                    drik = np.sqrt(dxik**2 + dyik**2 + dzik**2)
+                    
+                    dxjk = self.xArray[j] - self.xArray[k] - self.boxX*np.rint((self.xArray[j]-self.xArray[k])/self.boxX)
+                    dyjk = self.yArray[j] - self.yArray[k] - self.boxY*np.rint((self.yArray[j]-self.yArray[k])/self.boxY)
+                    dzjk = self.zArray[j] - self.zArray[k] - self.boxZ*np.rint((self.zArray[j]-self.zArray[k])/self.boxZ) 
+                    
+                    drjk = np.sqrt(dxjk**2 + dyjk**2 + dzjk**2)
+                    
+                    angle = np.rad2deg(np.arccos((drij**2 + drik**2 - drjk**2)/(2*drij*drik)))
+                
+                    if drij <= self.boxX/2 and drik <= self.boxX/2 and drjk <= self.boxX/2 and self.nameArray[i] + " " + self.nameArray[j] + " " + self.nameArray[k] == "Si Si Si" and i != j and j != k and i != k:
+                        ll = int(np.rint(angle/bz))
+                        count[ll, 0] += 1
+                        angles[ll, 0] += angle
+                    elif drij <= self.boxX/2 and drik <= self.boxX/2 and drjk <= self.boxX/2 and self.nameArray[i] + " " + self.nameArray[j] + " " + self.nameArray[k] == "Si O Si" and i != k:
+                        ll = int(np.rint(angle/bz))
+                        count[ll, 1] += 1
+                        angles[ll, 1] += angle
+                        
+                    elif drij <= self.boxX/2 and drik <= self.boxX/2 and drjk <= self.boxX/2 and self.nameArray[i] + " " + self.nameArray[j] + " " + self.nameArray[k] == "O Si O" and i != k:
+                        ll = int(np.rint(angle/bz))
+                        count[ll, 2] += 1
+                        angles[ll, 2] += angle
+                    elif drij <= self.boxX/2 and drik <= self.boxX/2 and drjk <= self.boxX/2 and self.nameArray[i] + " " + self.nameArray[j] == "O O O" and i != j and j != k and i != k:
+                        ll = int(np.rint(angle/bz))
+                        count[ll, 3] += 1
+                        angles[ll, 3] += angle
+        #---------------------------------------------------------------------
+        rbz = np.zeros((len(count), 4))
+        i = np.arange(1, len(count)+1, 1)
         
-        angle = calc_angle(np.array(bl1), np.array(bl2), np.array(bl3))
-        #
-        #print(angle)
-        df = pd.DataFrame(np.array([index, names, bl1, bl2, angle]).T, columns = ["Index", "Name", "Bond length 1", "Bond length2","Angle"])
-        df = df.drop_duplicates()
-        #df = remove_rev_dupes(df)
-        return df
+        rbz[:,0] = bz*i
+        rbz[:,1] = bz*i
+        rbz[:,2] = bz*i
+        rbz[:,3] = bz*i
+        
+        pdf = adhoc*count/(4*np.pi*rbz**2)
+
+        angles = angles/count
+        angles = np.nan_to_num(angles)
+        
+        sisisi_pdf = pdf[:,0][angles[:,0] !=  0]
+        siosi_pdf = pdf[:,1][angles[:,1] !=  0]
+        osio_pdf = pdf[:,2][angles[:,2] !=  0]
+        ooo_pdf = pdf[:,3][angles[:,3] !=  0]
+        
+        sisisi_ang = angles[:,0][angles[:,0] !=  0]
+        siosi_ang = angles[:,1][angles[:,1] !=  0]
+        osio_ang = angles[:,2][angles[:,2] !=  0]
+        ooo_ang = angles[:,3][angles[:,3] !=  0]
+        
+        return sisisi_pdf, siosi_pdf, osio_pdf, ooo_pdf, sisisi_ang, siosi_ang, osio_ang, ooo_ang
+
+
     
 def generate_data(xyz_directory, csv_directory): #not done
     
@@ -209,7 +243,7 @@ def make_bonds(x_array, y_array, z_array, name_array, boxx, boxy, boxz, cutoffs)
     dist = np.zeros((3, len(name_array), len(name_array)))
     index_2 = np.zeros((len(name_array), len(name_array)), dtype=int)
     
-    OO    = np.full(len(name_array),0)
+    OO    = np.full(len(name_array),1)
     SIO   = np.full(len(name_array),2)
     SISI  = np.full(len(name_array),3)  
 
@@ -258,7 +292,8 @@ def make_bonds(x_array, y_array, z_array, name_array, boxx, boxy, boxz, cutoffs)
         #bondtype.append(btype)
         dist[:,i] = np.array([dx, dy, dz])
         
-    return index_2, np.array(bondlengths), dist, 
+    return index_2, np.array(bondlengths), dist
+
 
 
 def match_bonds(index):
@@ -338,7 +373,7 @@ def three_ring(sisisi_idx, sisi_idx):
     
     return rings
 
-def four_ring(three_ring, sisisi_idx):
+def four_ring(three_ring, sisisi_idx, sisi_idx):
     rings = set([])
     chains = np.array(np.where(sisisi_idx != 0)).T
     
@@ -370,10 +405,24 @@ def five_ring(three_ring, four_ring, sisisi_idx, sisi_idx):
                 for j in range(len(connections_right)):
                     for k in range(len(connections_left)):
     
-                        if sisi_idx[connections_left[k], connections_right[j, 0]] != 0 and connections_left[k] not in chain and connections_right[j,0] not in chain:
-                            if frozenset([connections_right[j,0], chain[0], chain[1], chain[2]]) not in four_ring or frozenset([chain[0], chain[1], chain[2], connections_left[k]]) not in four_ring:
-                                #print(chain, connections_right[j])
-                                rings.add(frozenset([connections_right[j, 0],chain[0], chain[1], chain[2], connections_left[k]]))
+                        if (sisi_idx[connections_left[k], connections_right[j, 0]] != 0 and 
+                            connections_left[k] not in chain and 
+                            connections_right[j,0] not in chain and
+                            sisi_idx[connections_right[j,0], chain[1]] == 0 and
+                            sisi_idx[chain[1], connections_left[k]] == 0 and
+                            sisi_idx[chain[0], connections_left[k]] == 0 and
+                            sisi_idx[connections_right[j,0], chain[2]] == 0):
+                            if (frozenset([connections_left[k], chain[0], chain[1]]) not in three_ring or
+                                frozenset([chain[0], chain[1], connections_right[j,0]]) not in three_ring or
+                                frozenset([connections_left[k], chain[0], connections_right[j,0]]) not in three_ring or
+                                frozenset([connections_right[j,0], chain[0], chain[1]]) not in three_ring):
+                                if (frozenset([connections_right[j,0], chain[0], chain[1], chain[2]]) not in four_ring or
+                                    frozenset([chain[0], chain[1], chain[2], connections_left[k]]) not in four_ring or 
+                                    frozenset([chain[1], chain[2], connections_left[k], connections_right[j,0]]) not in four_ring):
+                                    #print(chain, connections_right[j])
+                                    if 215 in [connections_right[j, 0],chain[0], chain[1], chain[2], connections_left[k]]:
+                                        print([connections_right[j, 0],chain[0], chain[1], chain[2], connections_left[k]])
+                                    rings.add(frozenset([connections_right[j, 0],chain[0], chain[1], chain[2], connections_left[k]]))
     return rings
 
 def six_ring(rings3, rings4, rings5, sisisi_idx):
@@ -477,6 +526,8 @@ def seven_ring(rings3, rings4, rings5, rings6, sisisi_idx):
                                                 frozenset([connected_right[k, 1], connected_left[j,0], connected_left[j,1], chain[0], chain[1], chain[2]]) in rings6):
                                                 continue
                                             else:
+                                                if i <10:
+                                                    print(connected_left[j, 0], connected_left[j, 1], chain[0], chain[1], chain[2], connected_right[k, 0], connected_right[k,1])
                                                 rings.add(frozenset([connected_left[j, 0], connected_left[j, 1], chain[0], chain[1], chain[2], connected_right[k, 0], connected_right[k,1]]))        
     return rings
 
