@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 import os
 import time
-
+import matplotlib.pyplot as plt
 
 class AmorphousOxide:
     def __init__(self, nr_atoms, nr_si, nr_o, xyz_path):
@@ -76,105 +76,47 @@ class AmorphousOxide:
         rbz[:,2] = bz*i
         
         pdf = adhoc*count/(4*np.pi*rbz**2)
-        #non_zero = (pdf != 0) 
-        #pdf = pdf[non_zero]
-        #print(pdf.shape)
-        #dist = dist[non_zero]/count[non_zero]
         dist = dist/count
         dist = np.nan_to_num(dist)
         
-        sisi_pdf = pdf[:,0][dist[:,0] !=  0]
-        sio_pdf = pdf[:,1][dist[:,1] !=  0]
-        oo_pdf = pdf[:,2][dist[:,2] !=  0]
+        sisi_pdf = pdf[:,0]
+        sio_pdf = pdf[:,1]
+        oo_pdf = pdf[:,2]
         
-        sisi_dist = dist[:,0][dist[:,0] !=  0]
-        sio_dist = dist[:,1][dist[:,1] !=  0]
-        oo_dist = dist[:,2][dist[:,2] !=  0]
+        sisi_dist = dist[:,0]
+        sio_dist = dist[:,1]
+        oo_dist = dist[:,2]
         
         return sisi_pdf, sio_pdf, oo_pdf, sisi_dist, sio_dist, oo_dist
-    
-    
-    def calc_pdf_angle(self, nhdim, bz):
-        adhoc = np.array([self.boxX*self.boxY*self.boxZ/(self.nrSi**3 - (self.nrSi*3))/bz, self.boxX*self.boxY*self.boxZ/(self.nrSi**2*self.nrO - (self.nrSi*2 + self.nrO))/bz,
-                          self.boxX*self.boxY*self.boxZ/(self.nrSi*self.nrO**2 - (self.nrSi + self.nrO*2))/bz, self.boxX*self.boxY*self.boxZ/(self.nrO**3 -(self.nrO*3))/bz])
-        
-        count = np.zeros((nhdim, 4))
-        angles = np.zeros((nhdim, 4))
-        
-        for i in range(len(self.xArray)):
-            for j in range(len(self.xArray)):
-                dxij = self.xArray[i] - self.xArray[j] - self.boxX*np.rint((self.xArray[i]-self.xArray[j])/self.boxX)
-                dyij = self.yArray[i] - self.yArray[j] - self.boxY*np.rint((self.yArray[i]-self.yArray[j])/self.boxY)
-                dzij = self.zArray[i] - self.zArray[j] - self.boxZ*np.rint((self.zArray[i]-self.zArray[j])/self.boxZ) 
-                
-                drij = np.sqrt(dxij**2 + dyij**2 + dzij**2)
-                
-                for k in range(len(self.xArray)):
-                    dxik = self.xArray[i] - self.xArray[k] - self.boxX*np.rint((self.xArray[i]-self.xArray[k])/self.boxX)
-                    dyik = self.yArray[i] - self.yArray[k] - self.boxY*np.rint((self.yArray[i]-self.yArray[k])/self.boxY)
-                    dzik = self.zArray[i] - self.zArray[k] - self.boxZ*np.rint((self.zArray[i]-self.zArray[k])/self.boxZ) 
-                    
-                    drik = np.sqrt(dxik**2 + dyik**2 + dzik**2)
-                    
-                    dxjk = self.xArray[j] - self.xArray[k] - self.boxX*np.rint((self.xArray[j]-self.xArray[k])/self.boxX)
-                    dyjk = self.yArray[j] - self.yArray[k] - self.boxY*np.rint((self.yArray[j]-self.yArray[k])/self.boxY)
-                    dzjk = self.zArray[j] - self.zArray[k] - self.boxZ*np.rint((self.zArray[j]-self.zArray[k])/self.boxZ) 
-                    
-                    drjk = np.sqrt(dxjk**2 + dyjk**2 + dzjk**2)
-                    
-                    angle = np.rad2deg(np.arccos((drij**2 + drik**2 - drjk**2)/(2*drij*drik)))
-                
-                    if drij <= self.boxX/2 and drik <= self.boxX/2 and drjk <= self.boxX/2 and self.nameArray[i] + " " + self.nameArray[j] + " " + self.nameArray[k] == "Si Si Si" and i != j and j != k and i != k:
-                        ll = int(np.rint(angle/bz))
-                        count[ll, 0] += 1
-                        angles[ll, 0] += angle
-                    elif drij <= self.boxX/2 and drik <= self.boxX/2 and drjk <= self.boxX/2 and self.nameArray[i] + " " + self.nameArray[j] + " " + self.nameArray[k] == "Si O Si" and i != k:
-                        ll = int(np.rint(angle/bz))
-                        count[ll, 1] += 1
-                        angles[ll, 1] += angle
-                        
-                    elif drij <= self.boxX/2 and drik <= self.boxX/2 and drjk <= self.boxX/2 and self.nameArray[i] + " " + self.nameArray[j] + " " + self.nameArray[k] == "O Si O" and i != k:
-                        ll = int(np.rint(angle/bz))
-                        count[ll, 2] += 1
-                        angles[ll, 2] += angle
-                    elif drij <= self.boxX/2 and drik <= self.boxX/2 and drjk <= self.boxX/2 and self.nameArray[i] + " " + self.nameArray[j] == "O O O" and i != j and j != k and i != k:
-                        ll = int(np.rint(angle/bz))
-                        count[ll, 3] += 1
-                        angles[ll, 3] += angle
-        #---------------------------------------------------------------------
-        rbz = np.zeros((len(count), 4))
-        i = np.arange(1, len(count)+1, 1)
-        
-        rbz[:,0] = bz*i
-        rbz[:,1] = bz*i
-        rbz[:,2] = bz*i
-        rbz[:,3] = bz*i
-        
-        pdf = adhoc*count/(4*np.pi*rbz**2)
-
-        angles = angles/count
-        angles = np.nan_to_num(angles)
-        
-        sisisi_pdf = pdf[:,0][angles[:,0] !=  0]
-        siosi_pdf = pdf[:,1][angles[:,1] !=  0]
-        osio_pdf = pdf[:,2][angles[:,2] !=  0]
-        ooo_pdf = pdf[:,3][angles[:,3] !=  0]
-        
-        sisisi_ang = angles[:,0][angles[:,0] !=  0]
-        siosi_ang = angles[:,1][angles[:,1] !=  0]
-        osio_ang = angles[:,2][angles[:,2] !=  0]
-        ooo_ang = angles[:,3][angles[:,3] !=  0]
-        
-        return sisisi_pdf, siosi_pdf, osio_pdf, ooo_pdf, sisisi_ang, siosi_ang, osio_ang, ooo_ang
 
 
     
-def generate_data(xyz_directory, csv_directory): #not done
+def generate_data(xyz_directory, excel_path): #not done
+    frames = 0
+    """
+    tot_sisi_pdf = []
+    tot_sio_pdf = []
+    tot_oo_pdf = []
+    tot_sisi_dist = []
+    tot_sio_dist = []
+    tot_oo_dist = []
+    occurences_sisi = np.zeros(9600)
+    occurences_sio = np.zeros(9600)
+    occurences_oo = np.zeros(9600)
+    """
+    statistics = []
+    siosi_angles = np.array([])
+    siosi_bonds2 = np.array([])
+    osio_angles = np.array([])
+    osio_bonds2 = np.array([])
+    dihedral_angles = np.array([])
+    dihedral_idx = np.array([])
     
-    #etrap015 = AmorphousOxide(216, 72, 144, [14.949, 14.949, 14.949], xyz_directory)
+    siosi_dr = np.array([])
+    osio_dr = np.array([])
+    boxid = np.array([])
     
-    #folder = os.fsencode(xyz_directory)
-    start = time.time()
+    
     for subdir, dirs, files in os.walk(xyz_directory):
         for file in files:
             filepath = subdir + os.sep + file
@@ -182,36 +124,167 @@ def generate_data(xyz_directory, csv_directory): #not done
             etrap = AmorphousOxide(216, 72, 144, filepath)
             
             
-            cutoffs = [3.5, 2.0, 3.0]
+            ##########################################################################
+            #Calculating pdfs
+            """
+            sisi_pdf, sio_pdf, oo_pdf, sisi_dist, sio_dist, oo_dist = etrap.calc_pdf(9600, 0.02)
+            
+            tot_sisi_pdf.append(sisi_pdf)
+            tot_sio_pdf.append(sio_pdf)
+            tot_oo_pdf.append(oo_pdf)
+            tot_sisi_dist.append(sisi_dist)
+            tot_sio_dist.append(sio_dist)
+            tot_oo_dist.append(oo_dist)
+            
+            occurences_sisi[np.where(sisi_dist != 0)] += 1
+            occurences_sio[np.where(sio_dist != 0)] += 1
+            occurences_oo[np.where(oo_dist != 0)] += 1
+            """
+
             ##########################################################################
             #Bonds
-            index, names, bond_lengths, dx, dy, dz = make_bonds(etrap.xArray, etrap.yArray, etrap.zArray, etrap.nameArray, 
+            
+            
+            cutoffs = [3.44, 2.0, 3.0]
+            index, bond_lengths, dr = make_bonds(etrap.xArray, etrap.yArray, etrap.zArray, etrap.nameArray, 
                                                     etrap.boxX, etrap.boxY, etrap.boxZ, cutoffs)
             
-            bonds = np.array([index, names, bond_lengths, dx, dy, dz]).T
-            #df = pd.DataFrame(np.array([index, names, bond_lengths, dx, dy, dz]).T, columns = ["Index", "Name", "Bond length", "dx", "dy", "dz"])
-            print("Bonds aquired: ", len(index))
-            print(bonds.shape)
             ##########################################################################
-            #Get onli Si-O and O-Si bonds
-            #sio_df = df.loc[df["Name"] == "Si O"]
-            #osi_df = df.loc[df["Name"] == "O Si"]
-            #sio_df = sio_df.append(osi_df)
-            bond_sio = bonds[bonds[:, 1] == "Si O"] #or bonds[:, 1] == "O Si"]
-            #bond_osi = bonds[bonds[:, 1] == "O Si"]
-            print("Si-O bonds: ", len(bond_sio))
-            #print("O-Si bonds: ", len(bond_osi))
+            #Bond angles and dihedral angles
+            sisisi_idx, siosi_idx, osio_idx = match_bonds(index)
+            
+            siosi_angle = calc_angle(siosi_idx, dr)
+            osio_angle = calc_angle(osio_idx, dr)
+            
+            dihedrals = get_dihedrals_fast(siosi_idx, index)
+            dihed_angles = calc_dihedral(np.array(dihedrals), dr)
+            
+            r = np.sqrt(np.sum(dr**2, axis = 0))
+            
+            if frames == 0:  
+                siosi_angles = siosi_angle
+                siosi_bonds2 = np.array(np.where(siosi_idx != 0)).T
+                
+                siosi_dr = np.array([r[siosi_bonds2[:,0], siosi_bonds2[:,1]], r[siosi_bonds2[:,1], siosi_bonds2[:,2]]]).T
+
+                
+                osio_angles = osio_angle
+                osio_bonds2 = np.array(np.where(osio_idx != 0)).T
+                osio_dr = np.array([r[osio_bonds2[:,0], osio_bonds2[:,1]], r[osio_bonds2[:,1], osio_bonds2[:,2]]]).T
+                
+                dihedral_angles = dihed_angles
+                dihedral_idx = dihedrals
+                
+                boxid_siosi = np.full(len(siosi_angle), frames)
+                boxid_osio = np.full(len(osio_angle), frames)
+                
+            else:
+                
+                temp_siosi = np.array(np.where(siosi_idx != 0)).T
+                temp_osio = np.array(np.where(osio_idx != 0)).T
+                
+                siosi_angles = np.append(siosi_angles, siosi_angle)
+                siosi_bonds2 = np.append(siosi_bonds2, temp_siosi, axis = 0)
+                siosi_dr = np.append(siosi_dr, np.array([r[temp_siosi[:,0], temp_siosi[:,1]], r[temp_siosi[:,1], temp_siosi[:,2]]]).T, axis = 0)
+                
+                osio_angles = np.append(osio_angles, osio_angle)
+                osio_bonds2 = np.append(osio_bonds2, temp_osio, axis = 0)
+                osio_dr = np.append(osio_dr,  np.array([r[temp_osio[:,0], temp_osio[:,1]], r[temp_osio[:,1], temp_osio[:,2]]]).T, axis = 0)
+                
+
+                dihedral_angles = np.append(dihedral_angles, dihed_angles)
+                dihedral_idx = np.append(dihedral_idx, dihedrals)
+                
+                boxid_siosi = np.append(boxid_siosi, np.full(len(siosi_angle), frames))
+                boxid_osio = np.append(boxid_osio, np.full(len(osio_angle), frames))
+                #print(siosi_angles.shape, siosi_dr.shape, siosi_bonds2.shape, osio_angles.shape, osio_dr.shape, osio_bonds2.shape)
+    
+  
+            statistics.append({"name" : file, "bonds" : len(np.array(np.where(index != 0)).T), "angles" : len(siosi_angle) + len(osio_angle), "dihedral angles": len(dihed_angles)})
             
             
-            index_a, names_a, bl1_a, bl2_a, bl3_a, dx_1_a, dy_1_a, dz_1_a, dx_2_a, dy_2_a, dz_2_a = match_bonds(bond_sio[:,0], bond_sio[:,1], bond_sio[:, 2], bond_sio[:,3], bond_sio[:,4], bond_sio[:,5], bond_sio[:,0], bond_sio[:,1], bond_sio[:, 2], bond_sio[:,3], bond_sio[:,4], bond_sio[:,5])
-            angles_a = calc_angle(np.array(bl1_a), np.array(bl2_a), np.array(bl3_a))
-            angles = np.array([index_a, names_a, angles_a, bl1_a, bl2_a, bl3_a, dx_1_a, dy_1_a, dz_1_a, dx_2_a, dy_2_a, dz_2_a]).T
-            print("Angles aquired: ", len(angles))
+            frames += 1
             
-            #dihedrals = etrap.get_dihedral_angles()
-    end = time.time()
-    print("Time passed: ", end - start)
-    return 0
+    
+    angles = np.append(siosi_angles, osio_angles)
+    bonds2 = np.append(siosi_bonds2, osio_bonds2, axis = 0)
+    dr_all = np.append(siosi_dr, osio_dr, axis = 0)
+    name1 = np.append(np.full(len(siosi_angles), "Si"), np.full(len(osio_angles), "O"))
+    name2 = np.append(np.full(len(siosi_angles), "O"), np.full(len(osio_angles), "O"))
+    boxid = np.append(boxid_siosi, boxid_osio)
+    
+    print(angles.shape, bonds2.shape, dr_all.shape, boxid.shape)
+    
+    
+    simple_dataset = pd.DataFrame(np.array([boxid, bonds2[:,0], name1, bonds2[:,1], name2, bonds2[:,2], name1, dr_all[:,0], dr_all[:,1], angles]).T, columns = ["Box id", "Atom 1", "Name 1", "Atom 2", "Name 2", "Atom 3", "Name 3", "Bond 1-2", "Bond 2-3", "Angle"])
+    simple_dataset["Box id"] = simple_dataset["Box id"].astype(int)
+    simple_dataset["Atom 1"] = simple_dataset["Atom 1"].astype(int)
+    simple_dataset["Atom 2"] = simple_dataset["Atom 2"].astype(int)
+    simple_dataset["Atom 3"] = simple_dataset["Atom 3"].astype(int)
+    simple_dataset["Bond 1-2"] = simple_dataset["Bond 1-2"].astype(float)
+    simple_dataset["Bond 2-3"] = simple_dataset["Bond 2-3"].astype(float)
+    simple_dataset["Angle"] = simple_dataset["Angle"].astype(float)
+    
+    simple_dataset.to_excel("simple_dataset.xlsx")
+
+        
+            
+            
+    
+    
+    """
+    tot_sisi_pdf = np.sum(np.array(tot_sisi_pdf), axis = 0)#/frames
+    tot_sio_pdf = np.sum(np.array(tot_sio_pdf), axis = 0)#/frames
+    tot_oo_pdf = np.sum(np.array(tot_oo_pdf), axis = 0)#/frames
+    tot_sisi_dist = np.sum(np.array(tot_sisi_dist), axis = 0)#/frames
+    tot_sio_dist = np.sum(np.array(tot_sio_dist), axis = 0)#/frames
+    tot_oo_dist = np.sum(np.array(tot_oo_dist), axis = 0)#/frames
+    
+    tot_sisi_pdf = tot_sisi_pdf[tot_sisi_dist!=0]/occurences_sisi[tot_sisi_dist!= 0]
+    tot_sisi_dist = tot_sisi_dist[tot_sisi_dist!=0]/occurences_sisi[tot_sisi_dist!= 0]
+    tot_sio_pdf = tot_sio_pdf[tot_sio_dist!=0]/occurences_sio[tot_sio_dist!= 0]
+    tot_sio_dist = tot_sio_dist[tot_sio_dist!=0]/occurences_sio[tot_sio_dist!= 0]
+    tot_oo_pdf = tot_oo_pdf[tot_oo_dist!=0]/occurences_oo[tot_oo_dist!= 0]
+    tot_oo_dist = tot_oo_dist[tot_oo_dist!=0]/occurences_oo[tot_oo_dist!= 0]
+    """
+
+    
+
+    
+    """
+    plt.figure(figsize = (2, 5))
+    plt.plot(tot_sio_dist, tot_sio_pdf)
+    plt.xlim(1.55,1.68)
+    plt.ylim(10,75)
+    plt.xticks(size = 18)
+    plt.yticks(size = 18)
+    plt.show()
+    
+    plt.figure()
+    plt.title("Partial Distribution Function", size = 20, y = 1.05)
+    plt.plot(tot_sio_dist, tot_sio_pdf, label = "Si-O bonds")
+    plt.plot(tot_sisi_dist, tot_sisi_pdf, label = "Si-Si bonds")
+    plt.plot(tot_oo_dist, tot_oo_pdf, label = "O-O bonds")
+    plt.ylim(0,10)
+    plt.xlim(1.5,6)
+    plt.xticks(size = 18)
+    plt.yticks(size = 18)
+    plt.ylabel("Amplitude", size = 18)
+    plt.xlabel("Distance [Å]", size = 18)
+    plt.legend(fontsize = 16)
+    plt.show()
+    
+    print(dihedral_angles)
+    plt.figure()
+    plt.title("Dihedral angles", size = 20)
+    plt.hist(dihedral_angles)
+    plt.xlabel("Angle (Degrees)", size = 18)
+    plt.xticks(size = 18)
+    plt.yticks(size = 18)
+    plt.show()
+    """
+            
+    return statistics, simple_dataset#, dihedral_idx, dihedral_angles
 
         
 def calc_angle(index_matrix, dr):
