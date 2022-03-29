@@ -15,9 +15,6 @@ class AmorphousOxide:
         self.nrAtoms = nr_atoms
         self.nrSi = nr_si
         self.nrO = nr_o
-        #self.boxX = boxsize[0]
-        #self.boxY = boxsize[1]
-        #self.boxZ = boxsize[2]
         self.Si =0
         self.O  = 1
         
@@ -27,12 +24,22 @@ class AmorphousOxide:
         self.boxX = float(boxsize["atom"])
         self.boxY = float(boxsize["x"])
         self.boxZ = float(boxsize["y"])
+        
         #Retrieving data from xyz file and putting them in arrays:
         self.nameArray = list(xyz_df["atom"].to_numpy(dtype = str))[1:]
-        
         x = xyz_df["x"].to_numpy()[1:]
         y = xyz_df["y"].to_numpy()[1:]
         z = xyz_df["z"].to_numpy()[1:]
+ 
+        #If there is a defect it will be in the middle of the box
+        defectsx = set(np.where(abs(x - self.boxX/2) < 2e-1)[0])
+        defectsy = set(np.where(abs(y - self.boxY/2) < 2e-1)[0])
+        defectsz = set(np.where(abs(z - self.boxZ/2) < 2e-1)[0])
+        
+        is_defect = list((defectsx.intersection(defectsy)).intersection(defectsz))
+
+        if len(is_defect)>0:
+            self.defect = is_defect[0]
         
         #Implementing periodic boundaries:
         self.xArray = x - self.boxX*np.rint(x/self.boxX)
@@ -115,6 +122,7 @@ def generate_data(xyz_directory, excel_path): #not done
     siosi_dr = np.array([])
     osio_dr = np.array([])
     boxid = np.array([])
+    temp_osio = np.array([])
     
     
     for subdir, dirs, files in os.walk(xyz_directory):
@@ -172,6 +180,7 @@ def generate_data(xyz_directory, excel_path): #not done
                 osio_bonds2 = np.array(np.where(osio_idx != 0)).T
                 osio_dr = np.array([r[osio_bonds2[:,0], osio_bonds2[:,1]], r[osio_bonds2[:,1], osio_bonds2[:,2]]]).T
                 
+                
                 dihedral_angles = dihed_angles
                 dihedral_idx = dihedrals
                 
@@ -197,10 +206,17 @@ def generate_data(xyz_directory, excel_path): #not done
                 
                 boxid_siosi = np.append(boxid_siosi, np.full(len(siosi_angle), frames))
                 boxid_osio = np.append(boxid_osio, np.full(len(osio_angle), frames))
-                #print(siosi_angles.shape, siosi_dr.shape, siosi_bonds2.shape, osio_angles.shape, osio_dr.shape, osio_bonds2.shape)
-    
-  
-            statistics.append({"name" : file, "bonds" : len(np.array(np.where(index != 0)).T), "angles" : len(siosi_angle) + len(osio_angle), "dihedral angles": len(dihed_angles)})
+            #print(siosi_angles.shape, siosi_dr.shape, siosi_bonds2.shape, osio_angles.shape, osio_dr.shape, osio_bonds2.shape)
+            temp_osio = np.array(np.where(osio_idx != 0)).T
+            temp_osiobond = np.array([r[temp_osio[:,0], temp_osio[:,1]]]).T
+            temp_siosi = np.array(np.where(siosi_idx != 0)).T
+            temp_siosibond = np.array([r[temp_siosi[:,0], temp_siosi[:,1]]]).T
+
+            statistics.append({"name" : file, "bonds" : len(np.array(np.where(index != 0)).T), "angles" : len(siosi_angle) + len(osio_angle), 
+                               "dihedral angles": len(dihed_angles), "osio angles": [np.mean(osio_angle), max(osio_angle), min(osio_angle)], 
+                               "siosi angles": [np.mean(siosi_angle), max(siosi_angle), min(siosi_angle)],
+                               "osio bondlength" : [np.mean(temp_osiobond), max(temp_osiobond), min(temp_osiobond)],
+                               "siosi bondlength" : [np.mean(temp_siosibond), max(temp_siosibond), min(temp_siosibond)]})
             
             
             frames += 1
@@ -210,7 +226,7 @@ def generate_data(xyz_directory, excel_path): #not done
     bonds2 = np.append(siosi_bonds2, osio_bonds2, axis = 0)
     dr_all = np.append(siosi_dr, osio_dr, axis = 0)
     name1 = np.append(np.full(len(siosi_angles), "Si"), np.full(len(osio_angles), "O"))
-    name2 = np.append(np.full(len(siosi_angles), "O"), np.full(len(osio_angles), "O"))
+    name2 = np.append(np.full(len(siosi_angles), "O"), np.full(len(osio_angles), "Si"))
     boxid = np.append(boxid_siosi, boxid_osio)
     
     print(angles.shape, bonds2.shape, dr_all.shape, boxid.shape)
@@ -225,10 +241,24 @@ def generate_data(xyz_directory, excel_path): #not done
     simple_dataset["Bond 2-3"] = simple_dataset["Bond 2-3"].astype(float)
     simple_dataset["Angle"] = simple_dataset["Angle"].astype(float)
     
-    simple_dataset.to_excel("simple_dataset.xlsx")
+    #simple_dataset.to_excel("simple_dataset.xlsx")
 
         
-            
+    plt.figure()
+    plt.title("O-Si-O angle distribution", size = 20)
+    plt.hist(osio_angles, bins = 10)
+    plt.xlabel("Angle (Degrees)", size = 18)
+    plt.xticks(size = 18)
+    plt.yticks(size = 18)
+    plt.show()
+
+    plt.figure()
+    plt.title("Si-O-Si angle distribution", size = 20)
+    plt.hist(siosi_angles)
+    plt.xlabel("Angle (Degrees)", size = 18)
+    plt.xticks(size = 18)
+    plt.yticks(size = 18)
+    plt.show()        
             
     
     
@@ -286,7 +316,249 @@ def generate_data(xyz_directory, excel_path): #not done
             
     return statistics, simple_dataset#, dihedral_idx, dihedral_angles
 
+def analyze_Si(xyz_directory):
+    """
+    
+
+    Parameters
+    ----------
+    xyz_directory : string
+        path to folder containg xyz-files.
+
+    Returns
+    -------
+    final : 2d array
+        for each silicon atom, it contains box id, silicon id, angles and bondlengths the atom is involved in.
+    idx : list
+        indexes of all defects in final.
+
+    """
+    
+    frames = 0
+    
+    silicons = np.array([])
+    angles = np.array([])
+    boxid = np.array([])
+    bonds = np.array([])
+    defects = np.array([], dtype = int)
+    defect_idx = []
+    idx = []
+    
+    for subdir, dirs, files in os.walk(xyz_directory):
+        for file in files:
+            filepath = subdir + os.sep + file
+            print("Accessing file.... ", file)
+            etrap = AmorphousOxide(216, 72, 144, filepath)
+            ##########################################################################
+            #Bonds
+
+            cutoffs = [3.44, 2.0, 3.0]
+            index, bond_lengths, dr = make_bonds(etrap.xArray, etrap.yArray, etrap.zArray, etrap.nameArray, 
+                                                    etrap.boxX, etrap.boxY, etrap.boxZ, cutoffs)
+            
+            ##########################################################################
+            #Bond angles and dihedral angles
+            sisisi_idx, siosi_idx, osio_idx = match_bonds(index)
+            
+            siosi_angle = calc_angle(siosi_idx, dr)
+            osio_angle = calc_angle(osio_idx, dr)
+            
+            r = np.sqrt(np.sum(dr**2, axis = 0))
+            
+            siosi_index = np.array(np.where(siosi_idx)).T
+            osio_index = np.array(np.where(osio_idx)).T
+            si_atoms = np.unique(np.array(np.where(siosi_idx != 0))[0])
+            silicons = np.append(silicons, si_atoms)
+            
+
+            
+            if frames == 0:  
+                siosi_angles = np.sort(siosi_angle.reshape(len(si_atoms), 4), axis = 1)[:, ::-1] #all surrounding siosi angles
+                bonds = np.array([r[siosi_index[:,0], siosi_index[:,1]], r[siosi_index[:,1], siosi_index[:,2]]]).T
+                bonds = np.sort(bonds.reshape(len(si_atoms), 8), axis = 1)[:, ::-1] #All surrounding bond lengths
+
+                ind = np.lexsort((osio_index.T[0], osio_index.T[1]))
+                osio_angles = np.unique(np.sort(osio_angle[ind].reshape(len(si_atoms), 12), axis = 1), axis = 1)[:, ::-1]
+                
+                angles = np.append(siosi_angles, osio_angles, axis = 1)
+                boxid = np.full(len(si_atoms), frames)
+
+            else:
+
+                temp_dr = np.array([r[siosi_index[:,0], siosi_index[:,1]], r[siosi_index[:,1], siosi_index[:,2]]]).T
+                bonds = np.append(bonds, np.sort(temp_dr.reshape(len(si_atoms), 8), axis = 1)[:, ::-1], axis = 0)
+                
+                ind = np.lexsort((osio_index.T[0], osio_index.T[1]))
+                temp_angles = np.append(np.sort(siosi_angle.reshape(len(si_atoms), 4), axis = 1)[:, ::-1], np.unique(np.sort(osio_angle[ind].reshape(len(si_atoms), 12), axis = 1), axis = 1)[:, ::-1], axis = 1)
+                angles = np.append(angles, temp_angles, axis = 0)
+                
+                boxid = np.append(boxid, np.full(len(si_atoms), frames))
+                
+            if file[-8:] == "post.xyz":
+                defects = np.append(defects, np.array([etrap.defect + (frames+1)*72, etrap.defect + frames*72]))
+                #every other defect will come from post and pre
+                def_idx = np.where(si_atoms == etrap.defect)[0][0]
+                idx.append(def_idx + 72*frames)
+                #print(etrap.defect)
+                #print(def_idx, def_idx + 72*frames)
+                defect_idx.append([frames, etrap.defect])
+                #print(idx)
+                
+                
+                #print(etrap.defect)
+            
+            frames += 1
+
+    #is_defect = np.zeros(len(silicons), dtype = int)
+    #is_defect[defects[::2]] = 1
+    #is_defect[defects[1::2]] = 2
+    final = np.append(np.array([boxid, silicons]).T, np.append(angles, bonds, axis = 1), axis = 1)
+    
+    return final, idx
+
+def analyze_diheds(xyz_directory):
+    frames = 0
+    dihedral_angles = np.array([])
+    dihedral_idx = np.array([])
+    defect_idx = []
+    
+    for subdir, dirs, files in os.walk(xyz_directory):
+        for file in files:
+            filepath = subdir + os.sep + file
+            print("Accessing file.... ", file)
+            etrap = AmorphousOxide(216, 72, 144, filepath)
+            
+            ##########################################################################
+            #Bonds            
+            cutoffs = [3.44, 2.0, 3.0]
+            index, bond_lengths, dr = make_bonds(etrap.xArray, etrap.yArray, etrap.zArray, etrap.nameArray, 
+                                                    etrap.boxX, etrap.boxY, etrap.boxZ, cutoffs)
+            
+            ##########################################################################
+            #dihedral angles
+            sisisi_idx, siosi_idx, osio_idx = match_bonds(index)
+            
+            dihedrals = np.array(get_dihedrals_fast(siosi_idx, index))
+            si_atoms = np.unique(np.array(np.where(siosi_idx != 0))[0])
+            temp_angles = np.zeros((len(si_atoms), 24))
+            temp_idx = np.zeros((len(si_atoms), 24, 4)) 
+            
+            if file[-8:] == "post.xyz":
+                def_idx = np.where(si_atoms == etrap.defect)[0][0]
+                defect_idx.append(def_idx + 72*frames)
+            
+            idx = 0
+            for si in si_atoms:
+                connected_idx = (dihedrals == si).any(axis = 1)
+                dihed_idx = np.array(dihedrals)[connected_idx]
+                dihed_angles = calc_dihedral(np.array(dihed_idx), dr) 
+                
+                first = np.where(dihed_idx[:, 0] == si)[0]
+                sec = np.where(dihed_idx[:, 0] != si)[0]         
+                
+                temp_angles[idx, :12] = dihed_angles[first]
+                temp_angles[idx, 12:] = dihed_angles[sec]
+                temp_idx[idx, :12] = dihed_idx[first]
+                temp_idx[idx, 12:] = dihed_idx[sec]
+                
+                idx += 1
+                
+            if frames == 0:
+                dihedral_angles = temp_angles
+                dihedral_idx = temp_idx
+            else:
+                dihedral_angles = np.append(dihedral_angles, temp_angles, axis = 0)
+                dihedral_idx = np.append(dihedral_idx, temp_idx, axis = 0)
+            frames += 1
+            
+    return dihedral_angles, dihedral_idx, defect_idx
+
+def analyze_rings(xyz_directory):
+    frames = 0
+    rings = np.array([])
+    defect_idx = []
+    
+    
+    for subdir, dirs, files in os.walk(xyz_directory):
+        for file in files:
+            filepath = subdir + os.sep + file
+            print("Accessing file.... ", file)
+            etrap = AmorphousOxide(216, 72, 144, filepath)
+            
+            ##########################################################################
+            #Bonds            
+            cutoffs = [3.44, 2.0, 3.0]
+            index, bond_lengths, dr = make_bonds(etrap.xArray, etrap.yArray, etrap.zArray, etrap.nameArray, 
+                                                    etrap.boxX, etrap.boxY, etrap.boxZ, cutoffs)
+            
+            ##########################################################################
+            #rings
+            sisisi_idx, siosi_idx, osio_idx = match_bonds(index)
+            
+            si_atoms = np.unique(np.array(np.where(siosi_idx != 0))[0])
+            
+            sisi_idx = (index == 3)
+            
+            rings3 = three_ring(sisisi_idx, sisi_idx) 
+            #print(rings3)
+            rings4 = four_ring(rings3, sisisi_idx, sisi_idx)
+            rings5 = five_ring(rings3, rings4, sisisi_idx, sisi_idx)
+            #rings6 = six_ring(rings3, rings4, rings5, sisisi_idx, sisi_idx) 
+            
+            
+            rings3 = np.sort(np.array([list(x) for x in list(rings3)]).flatten())
+            rings4 = np.sort(np.array([list(x) for x in list(rings4)]).flatten())
+            rings5 = np.sort(np.array([list(x) for x in list(rings5)]).flatten())
+            #rings6 = np.sort(np.array([list(x) for x in list(rings6)]).flatten())
+            
+            rings3_idx = np.intersect1d(si_atoms, rings3, return_indices = True)[1]
+            rings4_idx = np.intersect1d(si_atoms, rings4, return_indices = True)[1]
+            rings5_idx = np.intersect1d(si_atoms, rings5, return_indices = True)[1]
+            #rings6_idx = np.intersect1d(si_atoms, rings6, return_indices = True)[1]
+
+            if file[-8:] == "post.xyz":
+                def_idx = np.where(si_atoms == etrap.defect)[0][0]
+                defect_idx.append(def_idx + 72*frames)
+
+            if frames == 0:
+                rings = np.zeros((len(si_atoms), 3))
+                rings[rings3_idx, 0] = 1
+                rings[rings4_idx, 1] = 1
+                rings[rings5_idx, 2] = 1
+                #rings[rings6_idx, 3] = 1
+                
+            else:
+                temp_rings = np.zeros((len(si_atoms), 3))
+                temp_rings[rings3_idx, 0] += 1
+                temp_rings[rings4_idx, 1] += 1
+                temp_rings[rings5_idx, 2] += 1
+                #temp_rings[rings6_idx, 3] += 1
+
+                
+                rings = np.append(rings, temp_rings, axis = 0)
+            
+            #Find atoms that appear more than once in one type of ring
+            rings = more_than_once(rings3, rings, si_atoms, frames, 0)
+            rings = more_than_once(rings4, rings, si_atoms, frames, 1)
+            rings = more_than_once(rings5, rings, si_atoms, frames, 2)
+            #rings = more_than_once(rings6, rings, si_atoms, frames, 3)
+            
+            frames += 1
+            
+    return rings, defect_idx
         
+def more_than_once(r, rings, si_atoms, frames, n):
+    mask = np.ones(len(r), dtype = bool)
+    mask[np.unique(r, return_index = True)[1]]= False
+    more_than_once = np.unique(r[mask])
+    
+    for atom in more_than_once:
+        occurrence = np.count_nonzero(r == atom)
+        idx = np.where(si_atoms == atom)[0] + frames*72
+        
+        rings[idx, n] += (occurrence-1)
+    return rings
+
 def calc_angle(index_matrix, dr):
     
     indexes = np.array(np.where(index_matrix!=0)).T
@@ -378,33 +650,37 @@ def match_bonds(index):
     SIOSI = 5 #binary 101
     OSIO = 2 #binary (0)10
     
+    SIO = 2
+    SISI = 3
+    
     for i in range(len(index)):
         #types = names[i] #all connected atoms bondtype
         indexes = index[i] #all connected atoms index
         
 
-        sisi_idx = np.where(indexes == 3)[0] #Finds all Si atoms connected to first Si atom in chain
-        sio_idx = np.where(indexes == 2)[0] #Finds all O atoms connected to first Si atom in chain
-            
+        sisi_idx = np.where(indexes == SISI)[0] #Finds all Si atoms connected to first Si atom in chain
+        sio_idx = np.where(indexes == SIO)[0] #Finds all O atoms connected to first Si atom in chain
+        middle_si = np.where(index[:, i] == SIO)[0] #Finds all Si atoms connected to first O atom
+        
         for j in range(len(sisi_idx)):
-            last_si = np.where(index[sisi_idx[j]] == 3)[0] #finds all Si atoms connected to the middle atom in chain
+            last_si = np.where(index[sisi_idx[j]] == SISI)[0] #finds all Si atoms connected to the middle atom in chain
             last_si = last_si[last_si != i]
             
             sisisi_index[i][sisi_idx[j]][last_si] = SISISI 
             
             
         for j in range(len(sio_idx)):
-            last_si = np.where(index.T[sio_idx[j]] == 2)[0] #Finds all Si atoms connected to the middle atom (O-Si bonds are Si-O bonds reversed -> .T)
+            last_si = np.where(index.T[sio_idx[j]] == SIO)[0] #Finds all Si atoms connected to the middle atom (O-Si bonds are Si-O bonds reversed -> .T)
             last_si = last_si[last_si != i]
             
             siosi_index[i][sio_idx[j]][last_si] = SIOSI 
+
+        for j in range(len(middle_si)):
+            last_o = np.where(index[middle_si[j]] == SIO)[0]
+            last_o = last_o[last_o != i]
             
-        if len(sio_idx):
-            last_o = np.where(indexes == 2)[0].T
-            last_o = last_o[last_o != sio_idx.T[0]]
-            
-            osio_index[sio_idx.T[0], i, last_o] = OSIO
- 
+            osio_index[i][middle_si[j]][last_o] = OSIO
+    
     return sisisi_index, siosi_index, osio_index
             
 
@@ -454,11 +730,9 @@ def four_ring(three_ring, sisisi_idx, sisi_idx):
         chain = chains[i].flatten()
         
         last_atom = np.array(np.where(sisisi_idx[chain[-1], :, chain[0]] != 0)).flatten()
-        #print(chain, last_atom)
         if frozenset(chain) not in three_ring:
             for j in range(len(last_atom)):
                 if last_atom[j] not in chain:
-                    #print(chain, last_atom[j])
                     rings.add(frozenset([chain[0], chain[1], chain[2], last_atom[j]]))
     return rings
 
@@ -492,13 +766,10 @@ def five_ring(three_ring, four_ring, sisisi_idx, sisi_idx):
                                 if (frozenset([connections_right[j,0], chain[0], chain[1], chain[2]]) not in four_ring or
                                     frozenset([chain[0], chain[1], chain[2], connections_left[k]]) not in four_ring or 
                                     frozenset([chain[1], chain[2], connections_left[k], connections_right[j,0]]) not in four_ring):
-                                    #print(chain, connections_right[j])
-                                    if 215 in [connections_right[j, 0],chain[0], chain[1], chain[2], connections_left[k]]:
-                                        print([connections_right[j, 0],chain[0], chain[1], chain[2], connections_left[k]])
                                     rings.add(frozenset([connections_right[j, 0],chain[0], chain[1], chain[2], connections_left[k]]))
     return rings
 
-def six_ring(rings3, rings4, rings5, sisisi_idx):
+def six_ring(rings3, rings4, rings5, sisisi_idx, sisi_idx):
     rings = set([])
     chains = np.array(np.where(sisisi_idx != 0)).T
     
@@ -506,6 +777,8 @@ def six_ring(rings3, rings4, rings5, sisisi_idx):
         chain = chains[i].flatten()
         connected_right = np.array(np.where(sisisi_idx[chain[0], :, :] != 0)).T
         connected_left = np.array(np.where(sisisi_idx[chain[-1], :, :] != 0)).T
+        
+        
         if connected_left.size != 0 and connected_right.size != 0:
             last_left = connected_left[:,1]
             last_right = connected_right[:,1]
@@ -514,8 +787,8 @@ def six_ring(rings3, rings4, rings5, sisisi_idx):
                     connected = np.array(np.where(last_right == last_left[j])).flatten()
                     
                     if connected.size !=0:
-                        #print(connected)
                         for k in range(len(connected)):
+                            
                             if connected_left[j,0] != connected_right[connected[k],0] and connected_left[j,0] not in chain and connected_right[connected[k],0] not in chain and connected_right[connected[k],1] not in chain:
                                 if (frozenset([connected_left[j,0], chain[0], chain[1]]) in rings3 or 
                                     frozenset([chain[0], chain[1], connected_right[connected[k], 0]]) in rings3 or 
@@ -534,14 +807,27 @@ def six_ring(rings3, rings4, rings5, sisisi_idx):
                                         frozenset([connected_right[connected[k],1], connected_left[j,0], chain[0], chain[1]]) in rings4):
                                         continue
                                     else:
-                                        if (frozenset([connected_left[j,0], chain[0], chain[1], chain[2], connected_right[connected[k],0]]) in rings5 or 
+                                        """if (frozenset([connected_left[j,0], chain[0], chain[1], chain[2], connected_right[connected[k],0]]) in rings5 or 
                                             frozenset([chain[0], chain[1], chain[2], connected_right[connected[k],0], connected_right[connected[k],1]]) in rings5 or
                                             frozenset([chain[1], chain[2], connected_right[connected[k],0], connected_right[connected[k],1], connected_left[j,0]]) in rings5 or
                                             frozenset([chain[2], connected_right[connected[k],0], connected_right[connected[k],1], connected_left[j,0], chain[0]]) in rings5 or
                                             frozenset([connected_right[connected[k],0], connected_right[connected[k],1], connected_left[j,0], chain[0], chain[1]]) in rings5 or
                                             frozenset([connected_right[connected[k],1], connected_left[j,0], chain[0], chain[1], chain[2]]) in rings5):
                                             continue
+                                            """
+                                        
+                                        if sisi_idx[connected_left[j,0], chain[0]] and sisi_idx[chain[0], chain[1]] and sisi_idx[chain[1], chain[2]] and sisi_idx[chain[2], connected_right[connected[k], 0]] and sisi_idx[connected_right[connected[k],0], connected_right[connected[k],1]] :
+                                            print([connected_left[j,0], chain[0], chain[1], chain[2], connected_right[connected[k],0], connected_right[connected[k],1]])
+
+                                        
+                                        if (sisi_idx[connected_left[j,0], connected_right[connected[k],0]] or
+                                            sisi_idx[chain[0], chain[2]] or sisi_idx[chain[0], connected_right[connected[k],1]] or sisi_idx[chain[0], connected_left[j, 0]] or
+                                            sisi_idx[chain[1], connected_right[connected[k],0]] or sisi_idx[chain[1], connected_right[connected[k],1]] or sisi_idx[chain[1], connected_left[j,0]] or
+                                            sisi_idx[chain[2], connected_right[connected[k],1]] or sisi_idx[chain[2], connected_right[connected[k],0]]):
+                                            continue
+                                            
                                         else:
+                                            #print([connected_left[j,0], chain[0], chain[1], chain[2], connected_right[connected[k],0], connected_right[connected[k],1]])
                                             rings.add(frozenset([connected_left[j,0], chain[0], chain[1], chain[2], connected_right[connected[k],0], connected_right[connected[k],1]]))
                     
     return rings
