@@ -14,13 +14,13 @@ import pandas as pd
 
 
 #%%
-"""
-for subdir, dirs, files in os.walk("C:\\Users\\kajah\\git_repo\\Bcs\\xyz_files"):
+
+for subdir, dirs, files in os.walk("C:\\Users\\kajah\\git_repo\\Bcs\\xyz_files_new\\xyz"):
     i = 0
     for file in files:
         print(i, file)
         i+=1
-"""
+
 
 #%%
 
@@ -37,8 +37,6 @@ index, bond_lengths, dr = ao.make_bonds(etrap.xArray, etrap.yArray, etrap.zArray
 #Bond angles and dihedral angles
 sisisi_idx, siosi_idx, osio_idx = ao.match_bonds(index)
 
-#print(np.array(np.where(osio_idx)).T)
-
 #%%
 rings, defect_idx = ao.analyze_rings("C:\\Users\\kajah\\git_repo\\Bcs\\xyz_files")
 
@@ -46,7 +44,7 @@ rings, defect_idx = ao.analyze_rings("C:\\Users\\kajah\\git_repo\\Bcs\\xyz_files
 print(rings.shape, len(defect_idx))
 defect_idx = np.array(defect_idx)
 #%%
-size = [3, 4, 5]
+size = [2, 3, 4, 5]
 
 post_rings = rings[defect_idx]
 def_rings = rings[defect_idx + 72]
@@ -64,19 +62,21 @@ plt.show()
 perc_ndef = np.count_nonzero(ndef_rings, axis = 0)/len(ndef_rings)*100
 perc_def = np.count_nonzero(def_rings, axis = 0)/len(def_rings)*100
 print("Normal sites: \n----------------------")
-print( "Rings of size 3: ", perc_ndef[0])
-print( "Rings of size 4: ", perc_ndef[1])
-print( "Rings of size 5: ", perc_ndef[2])
+print( "Rings of size 2: ", perc_ndef[0])
+print( "Rings of size 3: ", perc_ndef[1])
+print( "Rings of size 4: ", perc_ndef[2])
+print( "Rings of size 5: ", perc_ndef[3])
 print("\n")
 
 print("Defect sites: \n----------------------")
-print( "Rings of size 3: ", perc_def[0])
-print( "Rings of size 4: ", perc_def[1])
-print( "Rings of size 5: ", perc_def[2])
+print( "Rings of size 2: ", perc_def[0])
+print( "Rings of size 3: ", perc_def[1])
+print( "Rings of size 4: ", perc_def[2])
+print( "Rings of size 5: ", perc_ndef[3])
 print("\n\n")
 
-perc_ndef = np.count_nonzero(np.logical_and(ndef_rings[:,0] >0, ndef_rings[:, 1]>0))/len(ndef_rings)*100
-perc_def = np.count_nonzero(np.logical_and(def_rings[:,0] >0, def_rings[:, 1]>0))/len(def_rings)*100
+perc_ndef = np.count_nonzero(np.logical_and(ndef_rings[:,1] >0, ndef_rings[:, 2]>0))/len(ndef_rings)*100
+perc_def = np.count_nonzero(np.logical_and(def_rings[:,1] >0, def_rings[:, 2]>0))/len(def_rings)*100
 
 print("Normal sites: \n----------------------")
 print(  "Si in both ring of size 3 and 4", perc_ndef)
@@ -98,6 +98,11 @@ for i in range(len(size)):
     
     print("x-axis: (defects)", np.unique(def_rings[:,i]))
 
+#%%
+print(np.count_nonzero(ndef_rings[:, 0]))
+print(np.count_nonzero(def_rings[:, 0]))
+
+print(np.count_nonzero(ndef_rings[:, 0] == 0))
 #%%
 dihedral_angles, dihedral_idx, defect_idx = ao.analyze_diheds("C:\\Users\\kajah\\git_repo\\Bcs\\xyz_files")
 #%%
@@ -308,17 +313,11 @@ final, defect_idx = ao.analyze_Si("C:\\Users\\kajah\\git_repo\\Bcs\\xyz_files")
 
 #%%
 print(final[278])
+print(final[279])
+print(final.shape)
 #%%
 print("Number of defects found: ", len(defect_idx))
 defect_idx= np.array(defect_idx)
-
-#def_idx = np.where(is_defect == 1)[0]
-#ndef_idx = np.where(is_defect == 0)[0]
-#post_idx = np.where(is_defect == 2)[0]
-
-#post_idx = np.intersect1d(final[:, 1], post_idx, return_indices = True)[1]
-#def_idx = np.intersect1d(final[:, 1], def_idx, return_indices = True)[1]
-#ndef_idx = np.intersect1d(final[:, 1], ndef_idx, return_indices = True)[1]
 
 post_idx = defect_idx
 def_idx = defect_idx+72
@@ -337,12 +336,38 @@ post_bonds = final[post_idx, 12:]
 
 print(len(ndef_angles), len(post_angles), len(def_angles), len(final)-len(ndef_angles))
 
-
 #%%
 #OSIO ANgles
 def_osio = def_angles[:, 4:].flatten()
 ndef_osio = ndef_angles[:, 4:].flatten()
 post_osio = post_angles[:, 4:].flatten()
+
+plt.figure()
+plt.scatter(np.arange(0,58,1), def_angles[:, 4], c = "b")
+plt.scatter(np.arange(0,58,1), def_angles[:, 5], c = "b")
+plt.scatter(np.arange(0,58,1), def_angles[:, 6], c = "b")
+plt.scatter(np.arange(0,58,1), def_angles[:, 7], c = "b")
+plt.scatter(np.arange(0,58,1), def_angles[:, 8], c = "b")
+plt.scatter(np.arange(0,58,1), def_angles[:, 9], c = "b")
+plt.show()
+
+plt.figure()
+plt.scatter(np.arange(0,27388,1), ndef_angles[:, 4], c = "b")
+plt.scatter(np.arange(0,27388,1), ndef_angles[:, 5], c = "b")
+plt.scatter(np.arange(0,27388,1), ndef_angles[:, 6], c = "b")
+plt.scatter(np.arange(0,27388,1), ndef_angles[:, 7], c = "b")
+plt.scatter(np.arange(0,27388,1), ndef_angles[:, 8], c = "b")
+plt.scatter(np.arange(0,27388,1), ndef_angles[:, 9], c = "b")
+plt.show()
+
+plt.figure()
+plt.hist(np.sum(def_angles[:, 4:], axis = 1))
+plt.show()
+
+plt.figure()
+plt.hist(np.sum(ndef_angles[:, 4:], axis = 1))
+plt.show()
+
 
 print(def_angles[:, :6].shape)
 plt.figure()
@@ -359,38 +384,54 @@ plt.hist(ndef_osio, alpha = 0.5, color = "green", edgecolor = "k")
 plt.show()
 #%%
 cutoff_angle = 125
-cut_offs = np.arange(105, 135, 1)
+cut_offs = np.arange(105, 150, 1)
 
-pre_def = np.count_nonzero(np.count_nonzero(def_angles[:, 4:]>cutoff_angle, axis = 1)==2)
-no_def = np.count_nonzero(np.count_nonzero(ndef_angles[:, 4:]>cutoff_angle, axis = 1)==2)
+pre_def = np.count_nonzero(np.count_nonzero(def_angles[:, 4:]>cutoff_angle, axis = 1)>0)
+no_def = np.count_nonzero(np.count_nonzero(ndef_angles[:, 4:]>cutoff_angle, axis = 1)>0)
 post_def = np.count_nonzero(np.count_nonzero(post_angles[:, 4:]>cutoff_angle, axis = 1)==2)
 
 
 print(np.array(np.where(post_angles[:, 4:]>cutoff_angle)).T)
 print(np.count_nonzero(def_angles[:, 4:]>cutoff_angle, axis = 1))
 plt.figure()
-plt.title("Percentage of Si atoms with 2 angles larger than the cut-off angle")
-plt.plot(cutoff_angle, no_def/len(ndef_angles[:, 4:])*100, "ro", label = "normal")
-plt.plot(cutoff_angle, pre_def/len(def_angles[:, 4:])*100, "bo", label = "pre defect")
-plt.plot(cutoff_angle, post_def/len(post_angles[:, 4:])*100, "bx", label = "post defect")
+plt.title("Si atoms with at least one angle larger than the cut-off angle", size = 16)
+plt.plot(cutoff_angle, no_def/len(ndef_angles[:, 4:])*100, color = "royalblue", marker = "o", markersize = 8, label = "normal")
+plt.plot(cutoff_angle, pre_def/len(def_angles[:, 4:])*100, color = "orange", marker = "x", markersize = 8, label = "pre defect")
+#plt.plot(cutoff_angle, post_def/len(post_angles[:, 4:])*100, "bx", label = "post defect")
 
 for cutoff_angle in cut_offs:
-    pre_def = np.count_nonzero(np.count_nonzero(def_angles[:, 4:]>cutoff_angle, axis = 1)==2)
-    no_def = np.count_nonzero(np.count_nonzero(ndef_angles[:, 4:]>cutoff_angle, axis = 1)==2)
-    post_def = np.count_nonzero(np.count_nonzero(post_angles[:, 4:]>cutoff_angle, axis = 1)==2)
+    pre_def = np.count_nonzero(np.count_nonzero(def_angles[:, 4:]>cutoff_angle, axis = 1)>0)
+    no_def = np.count_nonzero(np.count_nonzero(ndef_angles[:, 4:]>cutoff_angle, axis = 1)>0)
+    #post_def = np.count_nonzero(np.count_nonzero(post_angles[:, 4:]>cutoff_angle, axis = 1)==2)
     
-    #print("\n\nCut-off angle: ", cutoff_angle)
-    #print("Normal: Nr of occurrences: ", no_def, ". Percentage : ", np.round(no_def/len(ndef_angles[:, 4:])*100, 2))
-    #print("Pre defect: Nr of occurrences: ", pre_def, ". Percentage : ", np.round(pre_def/len(def_angles[:, 4:])*100, 2))
+    print("\n\nCut-off angle: ", cutoff_angle)
+    print("Normal: Nr of occurrences: ", no_def, ". Percentage : ", np.round(no_def/len(ndef_angles[:, 4:])*100, 2))
+    print("Pre defect: Nr of occurrences: ", pre_def, ". Percentage : ", np.round(pre_def/len(def_angles[:, 4:])*100, 2))
     #print("Post defect: Nr of occurrences: ", post_def, ". Percentage : ", np.round(post_def/len(post_angles[:, 4:])*100, 2))
     
-    plt.plot(cutoff_angle, no_def/len(ndef_angles[:, 4:])*100, "ro")
-    plt.plot(cutoff_angle, pre_def/len(def_angles[:, 4:])*100, "bo")
-    plt.plot(cutoff_angle, post_def/len(post_angles[:, 4:])*100, "bx")
-plt.ylabel("Percentage")
-plt.xlabel("Cut-off angle")
-plt.legend()
+    plt.plot(cutoff_angle, no_def/len(ndef_angles[:, 4:])*100, color = "royalblue", marker = "o", markersize = 8)
+    plt.plot(cutoff_angle, pre_def/len(def_angles[:, 4:])*100, color = "orange", marker = "x", markersize = 8)
+
+    #plt.plot(cutoff_angle, post_def/len(post_angles[:, 4:])*100, "bx")
+plt.ylabel("Percentage", size = 16)
+plt.xlabel("Cut-off angle", size = 16)
+plt.xticks(size = 14)
+plt.yticks(size = 14)
+plt.legend(fontsize = 12)
 plt.show()
+#%%
+print(def_rings[:, 1])
+def_cut = np.count_nonzero(def_angles[:, 4:]>132, axis = 1)
+def_tot = def_rings[:, 1] + def_cut
+
+print(np.count_nonzero(def_tot==2))
+
+ndef_cut = np.count_nonzero(ndef_angles[:, 4:]>132, axis = 1)
+ndef_tot = ndef_rings[:, 1] + ndef_cut
+
+print(np.count_nonzero(ndef_tot==2))
+
+
 
 #%%
 
@@ -425,17 +466,21 @@ for angle in cut_offs:
     i +=1
     plt.show()
     
-    
-    
-
-    
-
-
 #%%
 #SIOSI angles
 def_siosi = def_angles[:, :4].flatten()
 ndef_siosi = ndef_angles[:, :4].flatten()
 post_siosi = post_angles[:, :4].flatten()
+
+plt.figure()
+plt.hist(np.sum(def_angles[:, :4], axis = 1))
+plt.show()
+plt.figure()
+plt.hist(np.sum(ndef_angles[:, :4], axis = 1))
+plt.show()
+
+
+
 plt.figure()
 plt.title("Si-O-Si angles around defects")
 plt.hist(def_siosi, alpha = 0.5, color = "green", edgecolor = "k", label = "pre")
@@ -461,6 +506,19 @@ plt.figure()
 plt.title("Bonds around normal sites")
 plt.hist(ndef_bonds.flatten(), alpha = 0.5, color = "green", edgecolor = "k")
 plt.show()
+
+plt.figure()
+plt.title("Bonds around defects")
+plt.hist(def_bonds[:,0]/def_bonds[:,-1], bins = 12, alpha = 0.5, color = "green", edgecolor = "k", label = "pre")
+plt.legend()
+plt.show()
+
+plt.figure()
+plt.title("Bonds around normal sites")
+plt.hist(ndef_bonds[:,0]/ndef_bonds[:,-1], alpha = 0.5, color = "green", edgecolor = "k")
+plt.show()
+
+
 
 #%%
 """
